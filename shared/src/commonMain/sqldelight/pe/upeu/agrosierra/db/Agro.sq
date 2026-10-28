@@ -1,0 +1,86 @@
+CREATE TABLE lote (
+  id INTEGER NOT NULL PRIMARY KEY,
+  codigo TEXT NOT NULL,
+  nombre TEXT NOT NULL,
+  hectareas REAL NOT NULL,
+  cultivo TEXT NOT NULL,
+  valle TEXT NOT NULL,
+  campaniaCerrada INTEGER NOT NULL,
+  dosisMaxima REAL NOT NULL
+);
+
+CREATE TABLE labor (
+  id INTEGER NOT NULL PRIMARY KEY,
+  loteId INTEGER NOT NULL,
+  tipo TEXT NOT NULL,
+  fecha TEXT NOT NULL,
+  responsable TEXT NOT NULL,
+  cantidad REAL NOT NULL,
+  observacion TEXT NOT NULL,
+  pendiente INTEGER NOT NULL,
+  servidorId INTEGER,
+  operacion TEXT NOT NULL DEFAULT 'CREAR',
+  creadoEnEpochMillis INTEGER NOT NULL DEFAULT 0,
+  FOREIGN KEY (loteId) REFERENCES lote(id)
+);
+
+CREATE TABLE sincronizacion (
+  clave TEXT NOT NULL PRIMARY KEY,
+  instante TEXT NOT NULL
+);
+
+observarLotes:
+SELECT * FROM lote ORDER BY valle, nombre;
+
+observarLotesPorValle:
+SELECT * FROM lote WHERE valle = ? ORDER BY nombre;
+
+observarLote:
+SELECT * FROM lote WHERE id = ?;
+
+marcarCampaniaCerrada:
+UPDATE lote SET campaniaCerrada = 1 WHERE id = ?;
+
+reemplazarLote:
+INSERT OR REPLACE INTO lote(id, codigo, nombre, hectareas, cultivo, valle, campaniaCerrada, dosisMaxima)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+
+observarLaboresPorLote:
+SELECT * FROM labor WHERE loteId = ? ORDER BY fecha DESC;
+
+observarLabor:
+SELECT * FROM labor WHERE id = ?;
+
+reemplazarLabor:
+INSERT OR REPLACE INTO labor(id, loteId, tipo, fecha, responsable, cantidad, observacion, pendiente, servidorId, operacion, creadoEnEpochMillis)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+pendientes:
+SELECT * FROM labor WHERE pendiente = 1 ORDER BY fecha ASC;
+
+pendientesPorLote:
+SELECT loteId, COUNT(*) AS cantidad FROM labor WHERE pendiente = 1 GROUP BY loteId;
+
+eliminarLabor:
+DELETE FROM labor WHERE id = ?;
+
+eliminarLaborSincronizada:
+DELETE FROM labor WHERE pendiente = 0;
+
+eliminarLaboresSincronizadasPorLote:
+DELETE FROM labor WHERE pendiente = 0 AND loteId = ?;
+
+encolarEliminacion:
+UPDATE labor SET pendiente = 1, servidorId = ?, operacion = 'ELIMINAR' WHERE id = ?;
+
+observarIdLaborLocal:
+SELECT * FROM labor WHERE id = ?;
+
+guardarSincronizacion:
+INSERT OR REPLACE INTO sincronizacion(clave, instante) VALUES (?, ?);
+
+observarUltimaSincronizacion:
+SELECT instante FROM sincronizacion WHERE clave = 'lotes_labores' LIMIT 1;
+
+siguienteIdLocal:
+SELECT COALESCE(MIN(id), 0) FROM labor;
